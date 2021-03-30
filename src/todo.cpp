@@ -48,12 +48,12 @@ bool getTempOutputStream(const string& filepath,
     }
 }
 
-void outputTodoLists(string& filepath, struct tm* curr_time) {
+bool outputTodoLists(string& filepath, struct tm* curr_time) {
     ifstream file;
     file.open(filepath, ios_base::in);
     if (file.fail()) {
         cerr << "Could not open the list file at: " << filepath << endl;
-        exit(EXIT_FAILURE);
+        return false;;
     }
 
     // displays date
@@ -71,7 +71,7 @@ void outputTodoLists(string& filepath, struct tm* curr_time) {
             continue;
         }
         if (item.size() == 0) {
-            return;
+            continue;
         } else if (!completed) {
             cout << RED << count++ << ". " << item << COLOR_RESET << endl;
         } else {
@@ -79,6 +79,7 @@ void outputTodoLists(string& filepath, struct tm* curr_time) {
         }
     }
     file.close();
+    return true;
 }
 
 // remove a task
@@ -88,14 +89,14 @@ bool removeTask(string& filepath, unsigned int taskNum, string* removedTask) {
     file.open(filepath, ios::in);
     if (file.fail()) {
         cerr << "Could not edit the list file at: " << filepath << endl;
-        exit(EXIT_FAILURE);
+        return false;
     }
     
     // create a temp file as a buffer
     string temppath;
     ofstream temp;
     if (!getTempOutputStream(filepath, temppath, &temp)) {
-        exit(EXIT_FAILURE);
+        return false;
     }
 
     // copying to temp file, skipping the target task
@@ -125,7 +126,7 @@ bool removeTask(string& filepath, unsigned int taskNum, string* removedTask) {
     return deleted;
 }
 
-void addTask(string& filepath, const string& taskStr) {
+bool addTask(string& filepath, const string& taskStr) {
     fstream file;
     file.open(filepath, ios::in);
     if (file.fail()) {
@@ -133,7 +134,7 @@ void addTask(string& filepath, const string& taskStr) {
         file.open(filepath, ios::out);
         if (file.fail()) {
             cerr << "The file location cannot be accessed: " << filepath;
-            exit(EXIT_FAILURE);
+            return false;
         }
         file << "____below_are_completed____" << endl;
         file.close();
@@ -146,8 +147,7 @@ void addTask(string& filepath, const string& taskStr) {
     string temppath;
     ofstream temp;
     if (!getTempOutputStream(filepath, temppath, &temp)) {
-        cerr << "Could not create a temporary file at: " << temppath << endl;
-        exit(EXIT_FAILURE);
+        return false;
     }
 
     string item;
@@ -161,7 +161,7 @@ void addTask(string& filepath, const string& taskStr) {
 
         // copy everything else
         if (item.size() == 0) {
-            return;
+            continue;
         } else {
             temp << item << endl;
         }
@@ -173,6 +173,8 @@ void addTask(string& filepath, const string& taskStr) {
     // replacing the old file
     remove(filepath.c_str());
     rename(temppath.c_str(), filepath.c_str());
+
+    return true;
 }
 
 // complete a task.
@@ -245,9 +247,10 @@ int main(int argc, char* argv[]) {
 
     int taskNum; // the num for the task to be modified
     string task; // the task to add (in the case of command add)
+    bool success; // success or failure in operation
     switch (userCommand) {
         case r:
-            outputTodoLists(filepath, currTime);
+            success = outputTodoLists(filepath, currTime);
             break;
 
         case add:
@@ -264,7 +267,7 @@ int main(int argc, char* argv[]) {
                 task.append(argv[i]);
             }
             
-            addTask(filepath, task);
+            success = addTask(filepath, task);
             cout << "Task added:" << endl;
 
             // displaying the todo lists for convenience
@@ -283,7 +286,7 @@ int main(int argc, char* argv[]) {
                 return EXIT_FAILURE;
             }
             
-            if (removeTask(filepath, taskNum, NULL)) {
+            if (success = removeTask(filepath, taskNum, NULL)) {
                 cout << "List updated as follows:" << endl;
             } else {
                 cout << "the task number was not present, list is unchanged:" << endl;
@@ -305,7 +308,7 @@ int main(int argc, char* argv[]) {
                 return EXIT_FAILURE;
             }
 
-            if (completeTask(filepath, taskNum, NULL)) {
+            if (success = completeTask(filepath, taskNum, NULL)) {
                 cout << "List updated as follows:" << endl;
             } else {
                 cout << "the task number was not present, list is unchanged:" << endl;
